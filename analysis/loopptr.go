@@ -13,23 +13,24 @@ const category = "rangeloopptr"
 // addresses of loop variables are not being taken.
 type objPtrVisitor struct {
 	pass            *analysis.Pass
-	keyObj          *ast.Object
-	valObj          *ast.Object
+	objs            []*ast.Object
 	checkReturnStmt bool
 }
 
 func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
+	// TODO If hitting a new range loop, add the loop vars to list of checked objects.
+
 	if !v.checkReturnStmt {
 		if _, ok := node.(*ast.ReturnStmt); ok {
-			// Don't descent into return statement if configured to not do that.
+			// Don't descend into return statement if it's in the same function as the loop.
 			return nil
 		}
 		if _, ok := node.(*ast.FuncLit); ok {
 			// Do check return statements inside function literals.
+			// TODO Might as well remove objects of shadowed variables.
 			return &objPtrVisitor{
 				pass:            v.pass,
-				keyObj:          v.keyObj,
-				valObj:          v.valObj,
+				objs:            v.objs,
 				checkReturnStmt: true,
 			}
 		}
@@ -46,16 +47,17 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 		// Not taking address of identifier.
 		return v
 	}
-	obj := id.Obj
-	if obj == v.keyObj || obj == v.valObj {
-		// Taking address of object corresponding to key or value of range loop.
-		v.pass.Report(analysis.Diagnostic{
-			Pos:      id.Pos(),
-			Message:  fmt.Sprintf("taking address of range variable '%v'", id.Name),
-			Category: category,
-		})
-	}
 
+	for _, obj := range v.objs {
+		if obj == id.Obj {
+			// Taking address of object corresponding to key or value variable of range loop.
+			v.pass.Report(analysis.Diagnostic{
+				Pos:      id.Pos(),
+				Message:  fmt.Sprintf("taking address of range variable '%v'", id.Name),
+				Category: category,
+			})
+		}
+	}
 	return v
 }
 
@@ -63,33 +65,33 @@ type rangeLoopVisitor struct {
 	pass *analysis.Pass
 }
 
-func (v *rangeLoopVisitor) Visit(n ast.Node) (w ast.Visitor) {
+func (v *rangeLoopVisitor) Visit(n ast.Node) ast.Visitor {
 	node, ok := n.(*ast.RangeStmt)
 	if !ok {
-		// Node is not a range loop; descend.
+		// Node is not a range loop.
 		return v
 	}
 
-	key, _ := node.Key.(*ast.Ident)
-	val, _ := node.Value.(*ast.Ident)
-
-	if key == nil && val == nil {
-		return
+	objs := loopVarObjs(node)
+	if len(objs) == 0 {
+		return nil
 	}
-
-	var keyObj *ast.Object
-	var valObj *ast.Object
-	if key != nil && key.Name != "_" {
-		keyObj = key.Obj
-	}
-	if val != nil && val.Name != "_" {
-		valObj = val.Obj
-	}
-
 	return &objPtrVisitor{
 		pass:            v.pass,
-		keyObj:          keyObj,
-		valObj:          valObj,
+		objs:            objs,
 		checkReturnStmt: false,
 	}
+}
+
+func loopVarObjs(node *ast.RangeStmt) []*ast.Object {
+	var objs []*ast.Object
+	key, _ := node.Key.(*ast.Ident)
+	val, _ := node.Value.(*ast.Ident)
+	if key != nil && key.Name != "_" {
+		objs = append(objs, key.Obj)
+	}
+	if val != nil && val.Name != "_" {
+		objs = append(objs, val.Obj)
+	}
+	return objs
 }
