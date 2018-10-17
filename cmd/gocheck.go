@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/halleknast/gocheck-rangeloopaddr"
 	"golang.org/x/tools/go/analysis/singlechecker"
-	"mbo/gocheck-rangeloopaddr/rangeloopaddr"
 )
 
 func main() {

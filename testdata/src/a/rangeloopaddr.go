@@ -16,8 +16,9 @@ func RangeLoopAddrTests() {
 		println(i, j)
 
 		// Illegal access to addresses.
-		println(&i, j) // want "taking address of range variable 'i'"
-		println(i, &j) // want "taking address of range variable 'j'"
+		println(&i, j)  // want "taking address of range variable 'i'"
+		println(i, &j)  // want "taking address of range variable 'j'"
+		println(&i, &j) // want "taking address of range variable 'i'" "taking address of range variable 'j'"
 
 		// Legal access to shadowing variables.
 		i := i

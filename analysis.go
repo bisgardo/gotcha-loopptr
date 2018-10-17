@@ -7,7 +7,7 @@ import (
 
 var Analyzer = &analysis.Analyzer{
 	Name: "lock",
-	Doc:  "check that addresses of range loop variables aren't taken inside loop body",
+	Doc:  "check that addresses of range loop variables aren't taken inside loop body if it may not be the final iteration",
 	Run:  analyze,
 }
 
