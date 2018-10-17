@@ -1,4 +1,4 @@
-package analysis
+package rangeloopaddr
 
 import (
 	"go/ast"

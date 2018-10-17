@@ -1,7 +1,8 @@
-package analysis
+package rangeloopaddr
 
 import (
 	"fmt"
+
 	"go/ast"
 	"go/token"
 	"golang.org/x/tools/go/analysis"
@@ -19,6 +20,7 @@ type objPtrVisitor struct {
 
 func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 	// TODO If hitting a new range loop, add the loop vars to list of checked objects.
+	// TODO Allow taking address in block that's *guaranteed* to break loop (use ctrlflow pass).
 
 	if !v.checkReturnStmt {
 		if _, ok := node.(*ast.ReturnStmt); ok {

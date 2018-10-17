@@ -2,9 +2,9 @@ package main
 
 import (
 	"golang.org/x/tools/go/analysis/singlechecker"
-	"mbo/loop-pointer/analysis"
+	"mbo/gocheck-rangeloopaddr/rangeloopaddr"
 )
 
 func main() {
-	singlechecker.Main(analysis.Analyzer)
+	singlechecker.Main(rangeloopaddr.Analyzer)
 }
