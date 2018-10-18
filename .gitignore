@@ -1,5 +1,4 @@
 .*
 !.gitignore
-glide.lock
 vendor
-gocheck
+gocheck-rangeloopaddr

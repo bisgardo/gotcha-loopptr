@@ -1,21 +1,42 @@
 package rangeloopaddr
 
 import (
+	"fmt"
 	"go/ast"
 
 	"golang.org/x/tools/go/analysis"
 )
 
-// Analyzer checks that addresses of range loop variables are only taken in a safe way.
-var Analyzer = &analysis.Analyzer{
-	Name: category,
-	Doc:  "check that addresses of range loop variables aren't taken inside loop body if it may not be the final iteration",
-	Run:  analyze,
+const category = "rangeloopptr"
+
+type reporter func(id *ast.Ident)
+
+// NewAnalyzer creates an analyzer for checking that addresses of range loop variables are only taken in a safe way.
+// onReport parameter allows a caller to detect if diagnostics have been reported since singlechecker.Main doesn't
+// expose that information.
+func NewAnalyzer(onReport func()) *analysis.Analyzer {
+	return &analysis.Analyzer{
+		Name: category,
+		Doc:  "check that addresses of range loop variables aren't taken inside loop body if it may not be the final iteration",
+		Run: func(p *analysis.Pass) (interface{}, error) {
+			return analyze(p, onReport)
+		},
+	}
 }
 
-func analyze(p *analysis.Pass) (interface{}, error) {
+func analyze(p *analysis.Pass, onReport func()) (interface{}, error) {
+	reporter := func(id *ast.Ident) {
+		if onReport != nil {
+			onReport()
+		}
+		p.Report(analysis.Diagnostic{
+			Pos:      id.Pos(),
+			Message:  fmt.Sprintf("taking address of range variable '%v'", id.Name),
+			Category: category,
+		})
+	}
 	for _, f := range p.Files {
-		ast.Walk(&rangeLoopVisitor{pass: p}, f)
+		ast.Walk(rangeLoopVisitor(reporter), f)
 	}
 	return nil, nil
 }

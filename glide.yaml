@@ -1,5 +1,6 @@
-package: mbo/loop-pointer
+package: github.com/halleknast/gocheck-rangeloopaddr
 import:
 - package: golang.org/x/tools
-- package: github.com/pkg/errors
-  version: ^0.8.0
+  subpackages:
+  - go/analysis
+  - go/analysis/singlechecker
