@@ -1,8 +1,8 @@
 package a
 
-func RangeLoopAddrTests() {
-	var s []int
+var s []int
 
+func RangeLoopAddrTests() {
 	// No loop variables.
 	for range s {
 	}
@@ -64,6 +64,12 @@ func RangeLoopAddrTests() {
 	func() *int {
 		for i, j := range s {
 			// Legal access in return statement.
+			for range s {
+				return &i
+			}
+			for range s {
+				return &j
+			}
 			for i, _ := range s {
 				return &i
 			}
@@ -91,6 +97,12 @@ func RangeLoopAddrTests() {
 					// Legal access when in return statement.
 					return &i
 				}
+				for i := range s {
+					println(&i) // want "taking address of range variable 'i'"
+				}
+				for range s {
+					return &j // want "taking address of range variable 'j'"
+				}
 				return nil
 			}()
 
@@ -101,10 +113,15 @@ func RangeLoopAddrTests() {
 	}()
 
 	func() func() *int {
-		for _, j := range s {
+		for i := range s {
 			return func() *int {
 				// Legal access in return statement in defining loop.
-				return &j
+				for range s {
+					println(&i)
+					return &i
+				}
+				println(&i)
+				return &i
 			}
 		}
 		return nil

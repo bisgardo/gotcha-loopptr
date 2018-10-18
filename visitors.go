@@ -2,7 +2,6 @@ package rangeloopaddr
 
 import (
 	"fmt"
-
 	"go/ast"
 	"go/token"
 	"golang.org/x/tools/go/analysis"
@@ -13,29 +12,47 @@ const category = "rangeloopptr"
 // loopPtrVisitor walks the body of the provided range statement, checking that
 // addresses of loop variables are not being taken.
 type objPtrVisitor struct {
-	pass            *analysis.Pass
-	objs            []*ast.Object
-	checkReturnStmt bool
+	pass        *analysis.Pass
+	parentObjs  []*ast.Object
+	currentObjs []*ast.Object
 }
 
 func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
-	// TODO If hitting a new range loop, add the loop vars to list of checked objects.
+	// If hitting a new range loop, add the loop vars to list of checked objects.
+	if n, ok := node.(*ast.RangeStmt); ok {
+		return &objPtrVisitor{
+			pass:        v.pass,
+			parentObjs:  v.parentObjs,
+			currentObjs: append(loopVarObjs(n), v.currentObjs...), // Insert
+		}
+	}
+
 	// TODO Allow taking address in block that's *guaranteed* to break loop (use ctrlflow pass).
 
-	if !v.checkReturnStmt {
-		if _, ok := node.(*ast.ReturnStmt); ok {
-			// Don't descend into return statement if it's in the same function as the loop.
-			return nil
+	if _, ok := node.(*ast.ReturnStmt); ok {
+		// When recursing into a return statement, exclude objects in current function's scope from check.
+		// Objects from parent scopes should still be checked.
+		return &objPtrVisitor{
+			pass:        v.pass,
+			parentObjs:  v.parentObjs,
+			currentObjs: nil,
 		}
-		if _, ok := node.(*ast.FuncLit); ok {
-			// Do check return statements inside function literals.
-			// TODO Might as well remove objects of shadowed variables.
-			return &objPtrVisitor{
-				pass:            v.pass,
-				objs:            v.objs,
-				checkReturnStmt: true,
-			}
+	}
+	if _, ok := node.(*ast.FuncLit); ok {
+		// Merge parent and current objects to be the parent objects inside nested function.
+		var objs []*ast.Object
+		objs = append(objs, v.parentObjs...)
+		objs = append(objs, v.currentObjs...)
+		return &objPtrVisitor{
+			pass:        v.pass,
+			parentObjs:  objs,
+			currentObjs: nil,
 		}
+	}
+
+	if len(v.parentObjs) == 0 && len(v.currentObjs) == 0 {
+		// Skip actual check if there're no objects to test against.
+		return v
 	}
 
 	ue, ok := node.(*ast.UnaryExpr)
@@ -50,17 +67,23 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 		return v
 	}
 
-	for _, obj := range v.objs {
-		if obj == id.Obj {
-			// Taking address of object corresponding to key or value variable of range loop.
-			v.pass.Report(analysis.Diagnostic{
-				Pos:      id.Pos(),
-				Message:  fmt.Sprintf("taking address of range variable '%v'", id.Name),
-				Category: category,
-			})
+	check(v.pass, id, v.parentObjs, v.currentObjs)
+	return v
+}
+
+func check(p *analysis.Pass, id *ast.Ident, objses ...[]*ast.Object) {
+	// Check for objects in scope of current and parent objects.
+	for _, objs := range objses {
+		for _, obj := range objs {
+			if obj == id.Obj {
+				p.Report(analysis.Diagnostic{
+					Pos:      id.Pos(),
+					Message:  fmt.Sprintf("taking address of range variable '%v'", id.Name),
+					Category: category,
+				})
+			}
 		}
 	}
-	return v
 }
 
 type rangeLoopVisitor struct {
@@ -76,12 +99,12 @@ func (v *rangeLoopVisitor) Visit(n ast.Node) ast.Visitor {
 
 	objs := loopVarObjs(node)
 	if len(objs) == 0 {
-		return nil
+		return nil // TODO Not correct; add test wrapped in dummy range.
 	}
 	return &objPtrVisitor{
-		pass:            v.pass,
-		objs:            objs,
-		checkReturnStmt: false,
+		pass:        v.pass,
+		parentObjs:  nil,
+		currentObjs: objs,
 	}
 }
 
