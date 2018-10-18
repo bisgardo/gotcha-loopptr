@@ -18,12 +18,12 @@ type objPtrVisitor struct {
 }
 
 func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
-	// If hitting a new range loop, add the loop vars to list of checked objects.
+	// If hitting a new range loop, add the loop vars to list of checked objects of the current scope.
 	if n, ok := node.(*ast.RangeStmt); ok {
 		return &objPtrVisitor{
 			pass:        v.pass,
 			parentObjs:  v.parentObjs,
-			currentObjs: append(loopVarObjs(n), v.currentObjs...), // Insert
+			currentObjs: append(loopVarObjs(n), v.currentObjs...),
 		}
 	}
 
@@ -97,14 +97,10 @@ func (v *rangeLoopVisitor) Visit(n ast.Node) ast.Visitor {
 		return v
 	}
 
-	objs := loopVarObjs(node)
-	if len(objs) == 0 {
-		return nil // TODO Not correct; add test wrapped in dummy range.
-	}
 	return &objPtrVisitor{
 		pass:        v.pass,
 		parentObjs:  nil,
-		currentObjs: objs,
+		currentObjs: loopVarObjs(node),
 	}
 }
 

@@ -27,6 +27,13 @@ func RangeLoopAddrTests() {
 		println(&j)
 	}
 
+	// Wrap in dummy range to catch erroneous early bailout.
+	for range s {
+		for i := range s {
+			println(&i) // want "taking address of range variable 'i'"
+		}
+	}
+
 	{
 		var i, j int
 
