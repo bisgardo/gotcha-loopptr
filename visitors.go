@@ -5,7 +5,7 @@ import (
 	"go/token"
 )
 
-// loopPtrVisitor walks the body of the provided range statement, checking that
+// objPtrVisitor walks the body of the provided range statement, checking that
 // addresses of loop variables are not being taken.
 type objPtrVisitor struct {
 	reporter    reporter
@@ -22,8 +22,6 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 			currentObjs: append(loopVarObjs(n), v.currentObjs...),
 		}
 	}
-
-	// TODO Allow taking address in block that's *guaranteed* to break loop (use ctrlflow pass).
 
 	if _, ok := node.(*ast.ReturnStmt); ok {
 		// When recursing into a return statement, exclude objects in current function's scope from check.

@@ -133,4 +133,30 @@ func RangeLoopAddrTests() {
 		}
 		return nil
 	}()
+
+	func() func() *int {
+		for i := range s {
+			return func() *int {
+				for i := range s {
+					// Illegal access in shadowing variable.
+					println(&i) // want "taking address of range variable 'i'"
+				}
+				for i := range s {
+					// Legal access in of return statement of shadowing variable.
+					return &i
+				}
+				println(&i)
+				for range s {
+					// Legal access in nested dummy loop.
+					println(&i)
+				}
+				for j := range s {
+					// Legal access of parent variable but illegal access to the one in nested loop.
+					println(&i, &j) // want "taking address of range variable 'j'"
+				}
+				return &i
+			}
+		}
+		return nil
+	}()
 }
