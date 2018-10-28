@@ -26,6 +26,10 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 	if _, ok := node.(*ast.ReturnStmt); ok {
 		// When recursing into a return statement, exclude objects in current function's scope from check.
 		// Objects from parent scopes should still be checked.
+		// Optimization: If there's no parent objects to check, go back to using rangeLoopVisitor.
+		if len(v.parentObjs) == 0 {
+			return rangeLoopVisitor(v.reporter)
+		}
 		return &objPtrVisitor{
 			reporter:    v.reporter,
 			parentObjs:  v.parentObjs,
@@ -42,11 +46,6 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 			parentObjs:  objs,
 			currentObjs: nil,
 		}
-	}
-
-	if len(v.parentObjs) == 0 && len(v.currentObjs) == 0 {
-		// Skip actual check if there're no objects to test against.
-		return v
 	}
 
 	ue, ok := node.(*ast.UnaryExpr)
@@ -85,10 +84,14 @@ func (v rangeLoopVisitor) Visit(n ast.Node) ast.Visitor {
 		return v
 	}
 
+	objs := loopVarObjs(node)
+	if len(objs) == 0 {
+		return v
+	}
 	return &objPtrVisitor{
 		reporter:    reporter(v),
 		parentObjs:  nil,
-		currentObjs: loopVarObjs(node),
+		currentObjs: objs,
 	}
 }
 

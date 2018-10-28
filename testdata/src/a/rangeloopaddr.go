@@ -1,8 +1,8 @@
 package a
 
-var s []int
+func RangeLoopAddrIntTests() {
+	var s []int
 
-func RangeLoopAddrTests() {
 	// No loop variables.
 	for range s {
 	}
