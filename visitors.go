@@ -5,16 +5,17 @@ import (
 	"go/token"
 )
 
-// objPtrVisitor walks the body of the provided range statement, checking that
-// addresses of loop variables are not being taken.
+// objPtrVisitor is a visitor for walking the body of a range statement and
+// reporting if addresses of checked loop variables are being taken.
 type objPtrVisitor struct {
 	reporter    reporter
-	parentObjs  []*ast.Object
-	currentObjs []*ast.Object
+	parentObjs  []*ast.Object // AST objects to check from the parent scope.
+	currentObjs []*ast.Object // AST objects to check from the current function's scope.
 }
 
 func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
-	// If hitting a new range loop, add the loop vars to list of checked objects of the current scope.
+	// If hitting a new range loop,
+	// add the loop vars to list of checked objects of the current scope.
 	if n, ok := node.(*ast.RangeStmt); ok {
 		return &objPtrVisitor{
 			reporter:    v.reporter,
@@ -24,9 +25,11 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 	}
 
 	if _, ok := node.(*ast.ReturnStmt); ok {
-		// When recursing into a return statement, exclude objects in current function's scope from check.
+		// When recursing into a return statement,
+		// exclude objects in current function's scope from check.
 		// Objects from parent scopes should still be checked.
-		// Optimization: If there's no parent objects to check, go back to using rangeLoopVisitor.
+		// Optimization: If there's no parent objects to check,
+		// go back to using the lighter visitor rangeLoopVisitor.
 		if len(v.parentObjs) == 0 {
 			return rangeLoopVisitor(v.reporter)
 		}
@@ -37,7 +40,8 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 		}
 	}
 	if _, ok := node.(*ast.FuncLit); ok {
-		// Merge parent and current objects to be the parent objects inside nested function.
+		// Merge parent and current objects to be the parent scope
+		// objects inside nested function.
 		var objs []*ast.Object
 		objs = append(objs, v.parentObjs...)
 		objs = append(objs, v.currentObjs...)
@@ -75,6 +79,8 @@ func checkIdent(r reporter, id *ast.Ident, objses ...[]*ast.Object) {
 	}
 }
 
+// rangeLoopVisitor is a light weight visitor for walking an AST node
+// and delegating range statement nodes to objPtrVisitor, which does the actual checking.
 type rangeLoopVisitor reporter
 
 func (v rangeLoopVisitor) Visit(n ast.Node) ast.Visitor {
@@ -86,6 +92,7 @@ func (v rangeLoopVisitor) Visit(n ast.Node) ast.Visitor {
 
 	objs := loopVarObjs(node)
 	if len(objs) == 0 {
+		// No objects to check.
 		return v
 	}
 	return &objPtrVisitor{
