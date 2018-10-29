@@ -160,3 +160,14 @@ func RangeLoopAddrIntTests() {
 		return nil
 	}()
 }
+
+func RangeLoopAddrStructTests() {
+	var vs []struct {
+		m int
+	}
+
+	for _, v := range vs {
+		// Illegal access to addresses of members.
+		println(&v.m) // want "taking address of range variable 'v'"
+	}
+}

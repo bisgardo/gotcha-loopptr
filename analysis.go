@@ -9,7 +9,7 @@ import (
 
 const category = "rangeloopptr"
 
-type reporter func(id *ast.Ident)
+type report func(id *ast.Ident)
 
 // Analyzer is an analyzer for checking that addresses of range loop variables are only taken in a safe way.
 var Analyzer = &analysis.Analyzer{

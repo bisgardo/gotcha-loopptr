@@ -8,7 +8,7 @@ import (
 // objPtrVisitor is a visitor for walking the body of a range statement and
 // reporting if addresses of checked loop variables are being taken.
 type objPtrVisitor struct {
-	reporter    reporter
+	report
 	parentObjs  []*ast.Object // AST objects to check from the parent scope.
 	currentObjs []*ast.Object // AST objects to check from the current function's scope.
 }
@@ -18,12 +18,11 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 	// add the loop vars to list of checked objects of the current scope.
 	if n, ok := node.(*ast.RangeStmt); ok {
 		return &objPtrVisitor{
-			reporter:    v.reporter,
+			report:      v.report,
 			parentObjs:  v.parentObjs,
 			currentObjs: append(loopVarObjs(n), v.currentObjs...),
 		}
 	}
-
 	if _, ok := node.(*ast.ReturnStmt); ok {
 		// When recursing into a return statement,
 		// exclude objects in current function's scope from check.
@@ -31,10 +30,10 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 		// Optimization: If there's no parent objects to check,
 		// go back to using the lighter visitor rangeLoopVisitor.
 		if len(v.parentObjs) == 0 {
-			return rangeLoopVisitor(v.reporter)
+			return rangeLoopVisitor(v.report)
 		}
 		return &objPtrVisitor{
-			reporter:    v.reporter,
+			report:      v.report,
 			parentObjs:  v.parentObjs,
 			currentObjs: nil,
 		}
@@ -46,7 +45,7 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 		objs = append(objs, v.parentObjs...)
 		objs = append(objs, v.currentObjs...)
 		return &objPtrVisitor{
-			reporter:    v.reporter,
+			report:      v.report,
 			parentObjs:  objs,
 			currentObjs: nil,
 		}
@@ -58,30 +57,37 @@ func (v *objPtrVisitor) Visit(node ast.Node) ast.Visitor {
 		return v
 	}
 
-	id, ok := ue.X.(*ast.Ident)
-	if !ok {
-		// Not taking address of identifier.
-		return v
+	if id := rootIdent(ue.X); id != nil {
+		checkIdent(v.report, id, v.parentObjs)
+		checkIdent(v.report, id, v.currentObjs)
 	}
-
-	checkIdent(v.reporter, id, v.parentObjs, v.currentObjs)
 	return v
 }
 
-func checkIdent(r reporter, id *ast.Ident, objses ...[]*ast.Object) {
+func rootIdent(e ast.Expr) *ast.Ident {
+	for {
+		if s, ok := e.(*ast.SelectorExpr); ok {
+			e = s.X
+			continue
+		}
+
+		id, _ := e.(*ast.Ident)
+		return id
+	}
+}
+
+func checkIdent(r report, id *ast.Ident, objs []*ast.Object) {
 	// Check for objects in scope of current and parent objects.
-	for _, objs := range objses {
-		for _, obj := range objs {
-			if obj == id.Obj {
-				r(id)
-			}
+	for _, obj := range objs {
+		if obj == id.Obj {
+			r(id)
 		}
 	}
 }
 
 // rangeLoopVisitor is a light weight visitor for walking an AST node
-// and delegating range statement nodes to objPtrVisitor, which does the actual checking.
-type rangeLoopVisitor reporter
+// and delegating range statement nodes to objPtrVisitor for the actual checking.
+type rangeLoopVisitor report
 
 func (v rangeLoopVisitor) Visit(n ast.Node) ast.Visitor {
 	node, ok := n.(*ast.RangeStmt)
@@ -96,7 +102,7 @@ func (v rangeLoopVisitor) Visit(n ast.Node) ast.Visitor {
 		return v
 	}
 	return &objPtrVisitor{
-		reporter:    reporter(v),
+		report:      report(v),
 		parentObjs:  nil,
 		currentObjs: objs,
 	}
