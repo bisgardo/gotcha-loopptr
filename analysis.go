@@ -1,4 +1,4 @@
-package rangeloopaddr
+package loopptr
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-const category = "rangeloopptr"
+const category = "loopptr"
 
 type report func(id *ast.Ident)
 

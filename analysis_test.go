@@ -1,4 +1,4 @@
-package rangeloopaddr
+package loopptr
 
 import (
 	"testing"

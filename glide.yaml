@@ -1,4 +1,4 @@
-package: github.com/halleknast/gocheck-rangeloopaddr
+package: github.com/halleknast/gotcha-loopptr
 import:
 - package: golang.org/x/tools
   subpackages:
