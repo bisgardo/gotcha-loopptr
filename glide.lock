@@ -1,17 +1,22 @@
-hash: f969a40714ead3680514be0e68e6496bc8457e640df7fb5315b16b585290a826
-updated: 2018-10-18T14:30:10.787111+02:00
+hash: fe976aa02e3c317038f10356032effdbd190563f9b7473e4d735074059c4701f
+updated: 2018-12-20T23:32:22.067193+01:00
 imports:
 - name: golang.org/x/tools
-  version: 06f26fdaaa28cdb20cf496a5eec17e1270830a63
+  version: d12035dfdc6da9d82d9f9d0fba01b218324cb314
   subpackages:
   - go/analysis
   - go/analysis/analysistest
+  - go/analysis/internal/analysisflags
   - go/analysis/internal/checker
+  - go/analysis/internal/facts
   - go/analysis/singlechecker
+  - go/analysis/unitchecker
   - go/gcexportdata
   - go/internal/cgo
   - go/internal/gcimporter
+  - go/internal/packagesdriver
   - go/packages
+  - go/types/objectpath
   - internal/fastwalk
   - internal/gopathwalk
   - internal/semver
