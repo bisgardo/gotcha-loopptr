@@ -14,10 +14,8 @@ type report func(id *ast.Ident)
 // Analyzer is an analyzer for checking that addresses of range loop variables are only taken in a safe way.
 var Analyzer = &analysis.Analyzer{
 	Name: category,
-	Doc:  "check that addresses of range loop variables aren't taken inside loop body in a potentially non-final iteration",
-	Run: func(p *analysis.Pass) (interface{}, error) {
-		return analyze(p)
-	},
+	Doc:  "check that range loop variables do not have their addresses taken inside loop body in a potentially non-final iteration",
+	Run:  analyze,
 }
 
 func analyze(p *analysis.Pass) (interface{}, error) {

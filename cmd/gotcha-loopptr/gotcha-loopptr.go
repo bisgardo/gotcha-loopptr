@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/halleknast/gotcha-loopptr"
+	"github.com/bisgardo/gotcha-loopptr"
 	"golang.org/x/tools/go/analysis/singlechecker"
 )
 

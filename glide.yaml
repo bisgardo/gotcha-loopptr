@@ -1,6 +1,0 @@
-package: github.com/halleknast/gotcha-loopptr
-import:
-- package: golang.org/x/tools
-  subpackages:
-  - go/analysis
-  - go/analysis/singlechecker
